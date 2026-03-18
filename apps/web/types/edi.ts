@@ -15,8 +15,12 @@ export type LoopNode = {
 
 export type ParseResult = {
   transaction_type: string;
+  type: string;
+  sender: string;
+  receiver: string;
+  date: string;
   segments: Segment[];
-  loops: LoopNode;
+  loops: LoopNode[];
   metadata: Record<string, unknown>;
 };
 

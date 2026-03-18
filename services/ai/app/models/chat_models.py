@@ -7,6 +7,7 @@ class ChatRequest(BaseModel):
     transaction_type: Optional[str] = None
     segment: str
     error: str
+    value: Optional[str] = None
     question: Optional[str] = None
 
 

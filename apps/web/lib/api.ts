@@ -33,11 +33,11 @@ export async function validateEdi(transaction_type: string, segments: unknown[],
   return handleResponse(response);
 }
 
-export async function askAi(question: string, transaction_type: string, segment: string, error: string) {
+export async function askAi(question: string, transaction_type: string, segment: string, error: string, value?: string | null) {
   const response = await fetch(`${API_BASE}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question, transaction_type, segment, error }),
+    body: JSON.stringify({ question, transaction_type, segment, error, value: value ?? "" }),
   });
   return handleResponse(response);
 }
