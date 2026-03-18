@@ -3,11 +3,22 @@
   "rules": [
     {
       "segment": "INS",
-      "element": "NM1",
-      "rule": "regex",
-      "pattern": "^[YN]$",
-      "message": "INS01 must be Y or N for subscriber indicator.",
-      "fix": "Set INS01 to Y for subscriber, N for dependent."
+      "element": "INS01",
+      "required": true,
+      "enum": ["Y", "N"],
+      "error": "Invalid subscriber indicator",
+      "explanation": "INS01 indicates whether the member is the subscriber.",
+      "suggestion": "Set INS01 to Y (subscriber) or N (dependent)."
+    },
+    {
+      "segment": "REF",
+      "element": "REF02",
+      "required": true,
+      "pattern": "^[A-Z0-9]{1,50}$",
+      "max_length": 50,
+      "error": "Invalid member reference",
+      "explanation": "REF02 should be an alphanumeric member reference id.",
+      "suggestion": "Provide a valid member reference id."
     }
   ]
 }

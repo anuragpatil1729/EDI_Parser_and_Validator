@@ -7,6 +7,8 @@ export type Segment = {
 
 export type LoopNode = {
   loop: string;
+  hl_id?: string;
+  parent_id?: string;
   segments: Segment[];
   children: LoopNode[];
 };
@@ -24,7 +26,12 @@ export type ValidationIssue = {
   message: string;
   loop?: string;
   segment?: string;
+  element?: string;
   element_position?: number;
+  value?: string | null;
+  error?: string;
+  explanation?: string;
+  suggestion?: string;
   fix_suggestion?: string;
 };
 

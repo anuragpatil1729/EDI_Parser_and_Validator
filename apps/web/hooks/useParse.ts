@@ -15,7 +15,7 @@ export function useParse() {
     setError(null);
     try {
       const parsed = await parseByFileId(fileId);
-      const validated = await validateEdi(parsed.transaction_type, parsed.segments);
+      const validated = await validateEdi(parsed.transaction_type, parsed.segments, fileId);
       setParseResult(parsed);
       setValidation(validated);
     } catch (parseError) {

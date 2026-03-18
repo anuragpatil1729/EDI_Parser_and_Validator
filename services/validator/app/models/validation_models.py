@@ -9,7 +9,12 @@ class ValidationIssue(BaseModel):
     message: str
     loop: Optional[str] = None
     segment: Optional[str] = None
+    element: Optional[str] = None
     element_position: Optional[int] = None
+    value: Optional[str] = None
+    error: Optional[str] = None
+    explanation: Optional[str] = None
+    suggestion: Optional[str] = None
     fix_suggestion: Optional[str] = None
 
 
