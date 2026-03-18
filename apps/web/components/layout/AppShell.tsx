@@ -110,7 +110,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        {open ? <button type="button" aria-label="Close menu" onClick={() => setOpen(false)} className="fixed inset-0 z-30 bg-slate-950/40 md:hidden" /> : null}
+        {open ? <button type="button" aria-label="Close sidebar" onClick={() => setOpen(false)} className="fixed inset-0 z-30 bg-slate-950/40 md:hidden" /> : null}
 
         <div key={pathname} className="animate-page-fade p-4 md:p-8">
           {children}

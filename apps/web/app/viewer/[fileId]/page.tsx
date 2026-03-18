@@ -12,7 +12,7 @@ import Badge from "@/components/ui/Badge";
 import { validateEdi } from "@/lib/api";
 import { LoopNode, ParseResult, Segment, ValidationIssue, ValidationResult } from "@/types/edi";
 
-type ViewerTab = "tree" | "errors" | "ai";
+type ViewerTab = "tree" | "errors";
 type ClaimRow = { claimId: string; billed: string; paid: string; adjustment: string; status: string };
 type MemberRow = { memberName: string; status: string; plan: string; effectiveDate: string };
 
@@ -46,6 +46,47 @@ function build834Rows(segments: Segment[]): MemberRow[] {
   return members;
 }
 
+function trimValue(value?: string): string {
+  if (!value) return "Unknown";
+  const trimmed = value.trim();
+  return trimmed || "Unknown";
+}
+
+function ViewerSkeleton() {
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardContent className="space-y-4 p-4">
+          <div className="flex flex-wrap gap-2">
+            <div className="h-7 w-20 animate-shimmer rounded-full" />
+            <div className="h-7 w-44 animate-shimmer rounded-full" />
+            <div className="h-7 w-44 animate-shimmer rounded-full" />
+            <div className="h-7 w-32 animate-shimmer rounded-full" />
+            <div className="h-7 w-20 animate-shimmer rounded-full" />
+          </div>
+          <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3">
+            <div className="h-5 w-28 animate-shimmer rounded" />
+            <div className="h-5 w-28 animate-shimmer rounded" />
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex gap-2 rounded-xl border border-slate-200 bg-white p-1">
+        <div className="h-8 w-24 animate-shimmer rounded-lg" />
+        <div className="h-8 w-24 animate-shimmer rounded-lg" />
+      </div>
+
+      {["h-40", "h-52", "h-44"].map((heightClass, idx) => (
+        <Card key={idx}>
+          <CardContent className="p-4">
+            <div className={`w-full animate-shimmer rounded-xl ${heightClass}`} />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 export default function ViewerPage({ params }: { params: { fileId: string } }) {
   const { parseResult, validation, loading, error, parseAndValidateByFileId } = useParse();
   const [workingParseResult, setWorkingParseResult] = useState<ParseResult | null>(null);
@@ -58,7 +99,7 @@ export default function ViewerPage({ params }: { params: { fileId: string } }) {
   useEffect(() => setWorkingParseResult(parseResult), [parseResult]);
   useEffect(() => setWorkingValidation(validation), [validation]);
 
-  const onSelectIssue = useCallback((issue: ValidationIssue) => { setSelectedIssue(issue); setActiveTab("ai"); }, []);
+  const onSelectIssue = useCallback((issue: ValidationIssue) => { setSelectedIssue(issue); }, []);
 
   const onApplyFix = useCallback(async ({ issue, nextValue }: { issue: ValidationIssue; nextValue: string }) => {
     if (!workingParseResult) return;
@@ -80,9 +121,7 @@ export default function ViewerPage({ params }: { params: { fileId: string } }) {
   return (
     <main className="mx-auto grid max-w-7xl grid-cols-1 gap-4 lg:grid-cols-3">
       <section className="space-y-4 lg:col-span-2">
-        {loading ? (
-          <Card><CardContent className="space-y-3 p-6"><div className="h-5 w-40 animate-pulse rounded bg-slate-200" /><div className="h-4 w-full animate-pulse rounded bg-slate-200" /><div className="h-4 w-2/3 animate-pulse rounded bg-slate-200" /></CardContent></Card>
-        ) : null}
+        {loading ? <ViewerSkeleton /> : null}
 
         {error ? <Card><CardContent className="flex items-center gap-2 p-4 text-red-700"><CircleX className="h-4 w-4" />{error}</CardContent></Card> : null}
 
@@ -92,9 +131,10 @@ export default function ViewerPage({ params }: { params: { fileId: string } }) {
               <CardContent className="space-y-4 p-4">
                 <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
                   <Badge>Type {workingParseResult.transaction_type}</Badge>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1"><Building2 className="h-3.5 w-3.5" />Sender: {workingParseResult.sender || "Unknown"}</span>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1"><UserRound className="h-3.5 w-3.5" />Receiver: {workingParseResult.receiver || "Unknown"}</span>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1"><CalendarDays className="h-3.5 w-3.5" />{workingParseResult.date || "Unknown date"}</span>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1"><Building2 className="h-3.5 w-3.5" />Sender: {trimValue(workingParseResult.sender)}</span>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1"><UserRound className="h-3.5 w-3.5" />Receiver: {trimValue(workingParseResult.receiver)}</span>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1"><CalendarDays className="h-3.5 w-3.5" />{trimValue(workingParseResult.date)}</span>
+                  {typeof workingParseResult.metadata?.segment_count === "number" ? <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1">Segments: {workingParseResult.metadata.segment_count}</span> : null}
                   <Badge variant={workingValidation.is_valid ? "success" : "error"}>{workingValidation.is_valid ? "Valid" : "Invalid"}</Badge>
                 </div>
 
@@ -105,11 +145,10 @@ export default function ViewerPage({ params }: { params: { fileId: string } }) {
               </CardContent>
             </Card>
 
-            <Tabs items={[{ key: "tree", label: "Tree" }, { key: "errors", label: "Errors", count: issues.length }, { key: "ai", label: "AI" }]} active={activeTab} onChange={setActiveTab} />
+            <Tabs items={[{ key: "tree", label: "Tree" }, { key: "errors", label: "Errors", count: issues.length }]} active={activeTab} onChange={setActiveTab} />
 
             {activeTab === "tree" ? <TabPanel><SegmentTree loops={workingParseResult.loops} issues={issues} onSelectIssue={onSelectIssue} /></TabPanel> : null}
             {activeTab === "errors" ? <TabPanel><ErrorTable issues={issues} onApplyFix={onApplyFix} fixingIssueKey={fixingIssueKey} onSelectIssue={onSelectIssue} /></TabPanel> : null}
-            {activeTab === "ai" ? <TabPanel><AIChatPanel transactionType={workingParseResult.transaction_type} issues={issues} selectedIssue={selectedIssue} /></TabPanel> : null}
           </>
         ) : null}
 
@@ -120,6 +159,14 @@ export default function ViewerPage({ params }: { params: { fileId: string } }) {
         {workingParseResult?.transaction_type === "834" ? (
           <Card><CardHeader><CardTitle>834 Enrollment Snapshot</CardTitle></CardHeader><CardContent className="overflow-x-auto"><table className="min-w-full text-sm"><thead><tr className="border-b text-left text-slate-500"><th className="py-2">Member Name</th><th className="py-2">Status</th><th className="py-2">Plan</th><th className="py-2">Effective Date</th></tr></thead><tbody>{members834.map((row, idx) => <tr key={`${row.memberName}-${idx}`} className={`transition-all duration-200 hover:bg-indigo-50 ${idx % 2 ? "bg-slate-50/60" : "bg-white"}`}><td className="py-2.5">{row.memberName}</td><td className="py-2.5">{row.status}</td><td className="py-2.5">{row.plan}</td><td className="py-2.5">{row.effectiveDate}</td></tr>)}</tbody></table></CardContent></Card>
         ) : null}
+
+        <div className="lg:hidden">
+          {workingParseResult && workingValidation ? (
+            <AIChatPanel transactionType={workingParseResult.transaction_type} issues={issues} selectedIssue={selectedIssue} />
+          ) : (
+            <Card><CardContent className="p-6 text-center text-slate-500"><CheckCircle2 className="mx-auto mb-2 h-5 w-5 text-slate-400" />AI insights will appear once a file is parsed.</CardContent></Card>
+          )}
+        </div>
       </section>
 
       <aside className="hidden lg:block">

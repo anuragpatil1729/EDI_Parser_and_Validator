@@ -46,40 +46,42 @@ function LoopCard({ node, depth, issues, onSelectIssue }: { node: LoopNode; dept
       </CardHeader>
 
       <div className={`grid transition-all duration-300 ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
-        <CardContent className="space-y-2 overflow-hidden">
-          {node.segments.map((segment) => {
-            const segmentIssues = issues.filter((issue) => issueBelongsToSegment(issue, segment.id, node.loop));
-            const segmentSeverity = getSeverity(segmentIssues);
-            const segmentLabel = segmentDefinitions[segment.id] ?? "Unknown segment";
+        <div className="overflow-hidden">
+          <CardContent className="space-y-2">
+            {node.segments.map((segment) => {
+              const segmentIssues = issues.filter((issue) => issueBelongsToSegment(issue, segment.id, node.loop));
+              const segmentSeverity = getSeverity(segmentIssues);
+              const segmentLabel = segmentDefinitions[segment.id] ?? "Unknown segment";
 
-            return (
-              <div key={`${segment.id}-${segment.index}`} style={{ marginLeft: `${(depth + 1) * 14}px` }} className={`rounded-lg border p-3 ${segmentSeverity === "error" ? "border-red-200 bg-red-50" : segmentSeverity === "warning" ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-slate-50"}`}>
-                <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
-                  <span className="text-sm font-semibold text-slate-900">{segment.id} ({segmentLabel})</span>
-                  {segmentSeverity === "error" ? <Badge variant="error">Error</Badge> : null}
-                  {segmentSeverity === "warning" ? <Badge variant="warning">Warning</Badge> : null}
+              return (
+                <div key={`${segment.id}-${segment.index}`} style={{ marginLeft: `${(depth + 1) * 14}px` }} className={`rounded-lg border p-3 ${segmentSeverity === "error" ? "border-red-200 bg-red-50" : segmentSeverity === "warning" ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-slate-50"}`}>
+                  <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
+                    <span className="text-sm font-semibold text-slate-900">{segment.id} ({segmentLabel})</span>
+                    {segmentSeverity === "error" ? <Badge variant="error">Error</Badge> : null}
+                    {segmentSeverity === "warning" ? <Badge variant="warning">Warning</Badge> : null}
+                  </div>
+
+                  <div className="space-y-1 text-xs text-slate-700">
+                    {segment.elements.map((value, idx) => {
+                      const elementCode = getElementCode(segment.id, idx);
+                      const elementName = elementDictionary[elementCode] ?? `Element ${idx + 1}`;
+                      return <div key={`${elementCode}-${idx}`} className="rounded border border-slate-200 bg-white px-2 py-1"><span className="font-medium">{elementCode}</span> ({elementName}): <span className="font-mono">{value || ""}</span></div>;
+                    })}
+                  </div>
+
+                  {segmentIssues.length > 0 ? (
+                    <ul className="mt-3 space-y-2">
+                      {segmentIssues.map((issue, idx) => (
+                        <li key={`${issue.code}-${idx}`}><button className="rounded border border-transparent px-2 py-1 text-left text-xs text-slate-700 transition-all duration-200 hover:border-indigo-300 hover:bg-white" onClick={() => onSelectIssue?.(issue)} type="button">{issue.error || issue.message}</button></li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </div>
-
-                <div className="space-y-1 text-xs text-slate-700">
-                  {segment.elements.map((value, idx) => {
-                    const elementCode = getElementCode(segment.id, idx);
-                    const elementName = elementDictionary[elementCode] ?? `Element ${idx + 1}`;
-                    return <div key={`${elementCode}-${idx}`} className="rounded border border-slate-200 bg-white px-2 py-1"><span className="font-medium">{elementCode}</span> ({elementName}): <span className="font-mono">{value || ""}</span></div>;
-                  })}
-                </div>
-
-                {segmentIssues.length > 0 ? (
-                  <ul className="mt-3 space-y-2">
-                    {segmentIssues.map((issue, idx) => (
-                      <li key={`${issue.code}-${idx}`}><button className="rounded border border-transparent px-2 py-1 text-left text-xs text-slate-700 transition-all duration-200 hover:border-indigo-300 hover:bg-white" onClick={() => onSelectIssue?.(issue)} type="button">{issue.error || issue.message}</button></li>
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
-            );
-          })}
-          <div className="space-y-2">{node.children.map((child) => <LoopCard key={`${child.loop}-${child.hl_id ?? "na"}`} node={child} depth={depth + 1} issues={issues} onSelectIssue={onSelectIssue} />)}</div>
-        </CardContent>
+              );
+            })}
+            <div className="space-y-2">{node.children.map((child) => <LoopCard key={`${child.loop}-${child.hl_id ?? "na"}`} node={child} depth={depth + 1} issues={issues} onSelectIssue={onSelectIssue} />)}</div>
+          </CardContent>
+        </div>
       </div>
     </Card>
   );
