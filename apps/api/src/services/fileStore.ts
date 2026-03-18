@@ -8,7 +8,21 @@ type StoredFile = {
   uploadedAt: string;
 };
 
+type ParsedResult = {
+  fileId: string;
+  parsedJson: unknown;
+  createdAt: string;
+};
+
+type ValidationResult = {
+  fileId: string;
+  validationJson: unknown;
+  createdAt: string;
+};
+
 const fileMap = new Map<string, StoredFile>();
+const parsedMap = new Map<string, ParsedResult>();
+const validationMap = new Map<string, ValidationResult>();
 
 export async function saveFile(fileName: string, content: string) {
   const fileId = randomUUID();
@@ -20,6 +34,14 @@ export async function saveFile(fileName: string, content: string) {
   }
 
   return fileId;
+}
+
+export async function saveBatchFiles(files: Array<{ fileName: string; content: string }>) {
+  const stored = await Promise.all(files.map(async (file) => ({ fileId: await saveFile(file.fileName, file.content), fileName: file.fileName })));
+  return {
+    total_files: stored.length,
+    file_ids: stored,
+  };
 }
 
 export async function getFile(fileId: string) {
@@ -47,4 +69,36 @@ export async function getFile(fileId: string) {
     content: data.content,
     uploadedAt: data.uploaded_at,
   };
+}
+
+export async function saveParsedResult(fileId: string, parsedJson: unknown) {
+  const createdAt = new Date().toISOString();
+  const payload = { fileId, parsedJson, createdAt };
+  parsedMap.set(fileId, payload);
+
+  if (supabase) {
+    await supabase.from("edi_parsed_results").upsert({ file_id: fileId, parsed_json: parsedJson, created_at: createdAt });
+  }
+
+  return payload;
+}
+
+export async function saveValidationResult(fileId: string, validationJson: unknown) {
+  const createdAt = new Date().toISOString();
+  const payload = { fileId, validationJson, createdAt };
+  validationMap.set(fileId, payload);
+
+  if (supabase) {
+    await supabase.from("edi_validation_results").upsert({ file_id: fileId, validation_json: validationJson, created_at: createdAt });
+  }
+
+  return payload;
+}
+
+export function getStoredParsedResult(fileId: string) {
+  return parsedMap.get(fileId) || null;
+}
+
+export function getStoredValidationResult(fileId: string) {
+  return validationMap.get(fileId) || null;
 }

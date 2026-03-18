@@ -24,11 +24,11 @@ export async function parseByFileId(fileId: string) {
   return handleResponse(response);
 }
 
-export async function validateEdi(transaction_type: string, segments: unknown[]) {
+export async function validateEdi(transaction_type: string, segments: unknown[], fileId?: string) {
   const response = await fetch(`${API_BASE}/validate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ transaction_type, segments }),
+    body: JSON.stringify({ transaction_type, segments, fileId }),
   });
   return handleResponse(response);
 }

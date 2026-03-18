@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getFile } from "../services/fileStore";
+import { getFile, saveParsedResult } from "../services/fileStore";
 import { parseEdi } from "../services/parserService";
 
 export async function parseController(req: Request, res: Response) {
@@ -21,6 +21,10 @@ export async function parseController(req: Request, res: Response) {
     }
 
     const parsed = await parseEdi(content);
+    if (fileId) {
+      await saveParsedResult(fileId, parsed);
+    }
+
     return res.json(parsed);
   } catch (serviceError) {
     return res.status(502).json({ error: serviceError instanceof Error ? serviceError.message : "Parse failed" });
