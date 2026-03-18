@@ -1,20 +1,29 @@
 "use client";
 
-import { useState } from "react";
-import { parseEdi, validateEdi } from "@/lib/api";
+import { useCallback, useState } from "react";
+import { parseByFileId, validateEdi } from "@/lib/api";
 import { ParseResult, ValidationResult } from "@/types/edi";
 
 export function useParse() {
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   const [validation, setValidation] = useState<ValidationResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  async function parseAndValidate(rawEdi: string) {
-    const parsed: ParseResult = await parseEdi(rawEdi);
-    const validated: ValidationResult = await validateEdi(parsed.transaction_type, parsed.segments);
-    setParseResult(parsed);
-    setValidation(validated);
-    return { parsed, validated };
-  }
+  const parseAndValidateByFileId = useCallback(async (fileId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const parsed = await parseByFileId(fileId);
+      const validated = await validateEdi(parsed.transaction_type, parsed.segments);
+      setParseResult(parsed);
+      setValidation(validated);
+    } catch (parseError) {
+      setError(parseError instanceof Error ? parseError.message : "Parse failed");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  return { parseResult, validation, parseAndValidate };
+  return { parseResult, validation, loading, error, parseAndValidateByFileId };
 }

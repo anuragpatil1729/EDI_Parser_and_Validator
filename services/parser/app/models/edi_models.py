@@ -10,6 +10,13 @@ class SegmentModel(BaseModel):
     id: str
     elements: List[str]
     index: int
+    loop: str | None = None
+
+
+class LoopNode(BaseModel):
+    loop: str
+    segments: List[SegmentModel]
+    children: List["LoopNode"]
 
 
 class ParseResponse(BaseModel):

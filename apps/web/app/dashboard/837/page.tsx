@@ -1,1 +1,5 @@
-export default function Dashboard837(){return <main><h2>837 Dashboard</h2><p>Claims analytics appear here.</p></main>; }
+import ClaimsTable from "@/components/dashboard/ClaimsTable";
+
+export default function Dashboard837Page() {
+  return <main className="mx-auto max-w-6xl px-4 py-8"><ClaimsTable /></main>;
+}

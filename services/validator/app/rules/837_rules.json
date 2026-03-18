@@ -1,1 +1,13 @@
-{"required_segments":["ST","BHT","NM1","CLM","SE"]}
+{
+  "required_segments": ["ST", "BHT", "NM1", "CLM", "SE"],
+  "rules": [
+    {
+      "segment": "NM1",
+      "element": "NM8",
+      "rule": "regex",
+      "pattern": "^(XX|34|24|MI)$",
+      "message": "NM108 must contain a valid identifier qualifier.",
+      "fix": "Use qualifier XX for NPI or payer-approved qualifier."
+    }
+  ]
+}

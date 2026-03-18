@@ -1,14 +1,15 @@
-from typing import Dict, List, Optional
+from typing import Optional
 
 from pydantic import BaseModel
 
 
 class ChatRequest(BaseModel):
-    question: str
     transaction_type: Optional[str] = None
-    validation_issues: Optional[List[Dict]] = None
+    segment: str
+    error: str
+    question: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
-    answer: str
-    next_steps: List[str]
+    explanation: str
+    suggested_fix: str

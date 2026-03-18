@@ -12,9 +12,9 @@ export function useUpload() {
     setError(null);
     try {
       return await uploadFile(file);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload failed");
-      throw e;
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
+      throw uploadError;
     } finally {
       setLoading(false);
     }

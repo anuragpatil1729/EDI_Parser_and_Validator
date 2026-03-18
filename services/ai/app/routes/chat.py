@@ -10,8 +10,7 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 
 @router.post("", response_model=ChatResponse)
 def chat(payload: ChatRequest) -> ChatResponse:
-    context = build_context(payload.transaction_type, payload.validation_issues)
-    _ = build_prompt(payload.question, context)
-    issue_codes = [i.get("code", "UNKNOWN") for i in (payload.validation_issues or [])]
-    response = generate_response(issue_codes)
+    context = build_context(payload.transaction_type or "unknown", payload.segment, payload.error)
+    prompt = build_prompt(payload.question or "How do I fix this?", context)
+    response = generate_response(prompt, context)
     return ChatResponse(**response)

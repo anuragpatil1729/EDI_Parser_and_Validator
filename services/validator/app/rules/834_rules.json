@@ -1,1 +1,13 @@
-{"required_segments":["ST","BGN","INS","SE"]}
+{
+  "required_segments": ["ST", "BGN", "INS", "SE"],
+  "rules": [
+    {
+      "segment": "INS",
+      "element": "NM1",
+      "rule": "regex",
+      "pattern": "^[YN]$",
+      "message": "INS01 must be Y or N for subscriber indicator.",
+      "fix": "Set INS01 to Y for subscriber, N for dependent."
+    }
+  ]
+}

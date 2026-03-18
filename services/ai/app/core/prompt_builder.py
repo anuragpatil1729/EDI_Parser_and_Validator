@@ -1,6 +1,12 @@
-def build_prompt(question: str, context: str) -> str:
+from typing import Dict
+
+
+def build_prompt(question: str, context: Dict[str, str]) -> str:
     return (
-        "You are a healthcare EDI assistant. "
-        "Answer in plain English with actionable fixes. "
-        f"Context: {context} Question: {question}"
+        "You are a healthcare EDI expert. "
+        "Explain the error in plain English and provide a concise fix. "
+        f"Transaction: {context['transaction_type']}. "
+        f"Segment: {context['segment']}. "
+        f"Error: {context['error']}. "
+        f"Question: {question}"
     )
