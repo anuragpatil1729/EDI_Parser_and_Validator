@@ -7,7 +7,7 @@ from app.core.segment_parser import parse_segments
 from app.core.transaction_detector import detect_transaction_type, extract_metadata
 
 
-def _build_segment_view(segments: List[List[str]], loop_tree: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _build_segment_view(segments: List[List[str]], loop_roots: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     loop_by_index: Dict[int, str] = {}
 
     def walk(node: Dict[str, Any]) -> None:
@@ -16,7 +16,8 @@ def _build_segment_view(segments: List[List[str]], loop_tree: Dict[str, Any]) ->
         for child in node.get("children", []):
             walk(child)
 
-    walk(loop_tree)
+    for root in loop_roots:
+        walk(root)
 
     segment_view = []
     for index, segment in enumerate(segments):
@@ -33,6 +34,13 @@ def _build_segment_view(segments: List[List[str]], loop_tree: Dict[str, Any]) ->
     return segment_view
 
 
+def _to_float(value: str | None) -> float:
+    try:
+        return float(value or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def _extract_835_claims(segments: List[List[str]]) -> List[Dict[str, Any]]:
     claims: List[Dict[str, Any]] = []
 
@@ -43,9 +51,9 @@ def _extract_835_claims(segments: List[List[str]]) -> List[Dict[str, Any]]:
         claim = {
             "claim_id": segment[1] if len(segment) > 1 else "",
             "status": segment[2] if len(segment) > 2 else "",
-            "billed": float(segment[3]) if len(segment) > 3 and segment[3] else 0.0,
-            "paid": float(segment[4]) if len(segment) > 4 and segment[4] else 0.0,
-            "adjustments": float(segment[5]) if len(segment) > 5 and segment[5] else 0.0,
+            "billed": _to_float(segment[3] if len(segment) > 3 else None),
+            "paid": _to_float(segment[4] if len(segment) > 4 else None),
+            "adjustments": _to_float(segment[5] if len(segment) > 5 else None),
         }
         claims.append(claim)
 
@@ -76,7 +84,7 @@ def _extract_834_members(segments: List[List[str]]) -> List[Dict[str, Any]]:
         if segment_id == "REF" and len(segment) > 2 and segment[1] == "0F":
             current["member_id"] = segment[2]
 
-        if segment_id == "NM1" and len(segment) > 9 and segment[1] == "IL":
+        if segment_id == "NM1" and len(segment) > 4 and segment[1] == "IL":
             current["name"] = " ".join(part for part in [segment[3], segment[4]] if part)
 
         if segment_id == "HD" and len(segment) > 3:
@@ -110,6 +118,10 @@ def parse_edi(raw_edi: str) -> Dict[str, Any]:
 
     return {
         "transaction_type": transaction_type,
+        "type": transaction_type,
+        "sender": metadata.get("sender", ""),
+        "receiver": metadata.get("receiver", ""),
+        "date": metadata.get("date", ""),
         "segments": segment_view,
         "loops": loop_tree,
         "metadata": enriched_metadata,

@@ -40,6 +40,13 @@ def _parse_date(value: str) -> Optional[datetime]:
     return None
 
 
+def _to_float(value: str | None) -> float:
+    try:
+        return float(value or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def _claim_total_check(segments: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     issues: List[Dict[str, Any]] = []
     current_claim_total: Optional[float] = None
@@ -72,11 +79,10 @@ def _claim_total_check(segments: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             flush_claim()
             elements = segment.get("elements", [])
             current_claim_id = elements[0] if len(elements) > 0 else None
-            current_claim_total = float(elements[1]) if len(elements) > 1 and elements[1] else 0.0
+            current_claim_total = _to_float(elements[1] if len(elements) > 1 else None)
         elif segment.get("id") == "SV1" and current_claim_total is not None:
             elements = segment.get("elements", [])
-            amount = float(elements[1]) if len(elements) > 1 and elements[1] else 0.0
-            service_sum += amount
+            service_sum += _to_float(elements[1] if len(elements) > 1 else None)
 
     flush_claim()
     return issues

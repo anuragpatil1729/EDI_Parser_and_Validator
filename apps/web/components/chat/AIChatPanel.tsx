@@ -11,7 +11,13 @@ export default function AIChatPanel({ transactionType, issues }: { transactionTy
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const issue = issues[0];
-    await ask(question, transactionType, issue?.segment ?? "UNKNOWN", issue?.message ?? "No validation issues.");
+    await ask(
+      question,
+      transactionType,
+      issue?.segment ?? "UNKNOWN",
+      issue?.message ?? "No validation issues.",
+      issue?.value ?? "",
+    );
   }
 
   return (

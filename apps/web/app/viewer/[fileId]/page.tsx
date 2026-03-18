@@ -19,7 +19,7 @@ export default function ViewerPage({ params }: { params: { fileId: string } }) {
         <h2 className="text-2xl font-semibold">Viewer</h2>
         {loading ? <p>Processing...</p> : null}
         {error ? <p className="text-red-600">{error}</p> : null}
-        {parseResult ? <SegmentTree tree={parseResult.loops} issues={validation?.issues || []} /> : null}
+        {parseResult ? <SegmentTree loops={parseResult.loops} issues={validation?.issues || []} /> : null}
         {validation ? <ErrorTable issues={validation.issues} /> : null}
       </section>
       <aside>

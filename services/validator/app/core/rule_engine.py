@@ -8,27 +8,25 @@ from typing import Any, Dict, List, Optional
 RULES_DIR = Path(__file__).resolve().parent.parent / "rules"
 
 
-def _load_rules(transaction_type: str) -> Dict[str, Any]:
-    rule_path = RULES_DIR / f"{transaction_type}_rules.json"
-    if not rule_path.exists():
-        return {"required_segments": [], "rules": []}
-    return json.loads(rule_path.read_text())
+class RuleEngine:
+    def __init__(self, rules_dir: Path = RULES_DIR) -> None:
+        self.rules_dir = rules_dir
+
+    def load_rules(self, transaction_type: str) -> Dict[str, Any]:
+        rule_path = self.rules_dir / f"{transaction_type}_rules.json"
+        if not rule_path.exists():
+            return {"required_segments": [], "rules": []}
+        with rule_path.open("r", encoding="utf-8") as handle:
+            return json.load(handle)
+
+
+ENGINE = RuleEngine()
 
 
 def _element_index(element_ref: str) -> int:
-    """
-    Accepts NM108, NM8, CLM02, DTP3 and returns 1-based element index.
-    """
     digits = "".join(ch for ch in element_ref if ch.isdigit())
     if not digits:
         return 0
-
-    # NM108 -> 8, CLM02 -> 2
-    if len(digits) > 2 and digits.startswith("0"):
-        digits = digits[-1]
-    elif len(digits) > 2:
-        digits = digits[-2:] if digits[-2] == "0" else digits[-1]
-
     return int(digits.lstrip("0") or "0")
 
 
@@ -60,8 +58,16 @@ def _mk_issue(
     }
 
 
+def _get_value(segment: Dict[str, Any], element_ref: str) -> str:
+    idx = _element_index(element_ref)
+    if idx <= 0:
+        return ""
+    elements = segment.get("elements", [])
+    return str(elements[idx - 1]).strip() if len(elements) >= idx else ""
+
+
 def run_required_segment_rules(transaction_type: str, segments: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    ruleset = _load_rules(transaction_type)
+    ruleset = ENGINE.load_rules(transaction_type)
     required_segments = ruleset.get("required_segments", [])
     existing = {segment.get("id") for segment in segments}
 
@@ -86,9 +92,7 @@ def _validate_rule(rule: Dict[str, Any], segment: Dict[str, Any]) -> Optional[Di
     if not element_ref:
         return None
 
-    idx = _element_index(element_ref)
-    elements = segment.get("elements", [])
-    value = elements[idx - 1] if idx > 0 and len(elements) >= idx else ""
+    value = _get_value(segment, element_ref)
 
     if rule.get("required") and not value:
         return _mk_issue(
@@ -118,8 +122,10 @@ def _validate_rule(rule: Dict[str, Any], segment: Dict[str, Any]) -> Optional[Di
             code="REGEX_VALIDATION",
         )
 
-    min_len = rule.get("min_length")
-    max_len = rule.get("max_length")
+    exact_length = rule.get("length")
+    min_len = rule.get("min_length", exact_length)
+    max_len = rule.get("max_length", exact_length)
+
     if min_len is not None and len(value) < int(min_len):
         return _mk_issue(
             loop=segment.get("loop"),
@@ -145,7 +151,7 @@ def _validate_rule(rule: Dict[str, Any], segment: Dict[str, Any]) -> Optional[Di
         )
 
     allowed = rule.get("enum")
-    if allowed and value not in allowed:
+    if allowed and value not in set(allowed):
         return _mk_issue(
             loop=segment.get("loop"),
             segment=segment.get("id", ""),
@@ -161,7 +167,7 @@ def _validate_rule(rule: Dict[str, Any], segment: Dict[str, Any]) -> Optional[Di
 
 
 def run_json_rules(transaction_type: str, segments: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    ruleset = _load_rules(transaction_type)
+    ruleset = ENGINE.load_rules(transaction_type)
     raw_rules = ruleset.get("rules", [])
     issues: List[Dict[str, Any]] = []
 
