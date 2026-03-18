@@ -2,12 +2,19 @@ export type Segment = {
   id: string;
   elements: string[];
   index: number;
+  loop?: string;
+};
+
+export type LoopNode = {
+  loop: string;
+  segments: Segment[];
+  children: LoopNode[];
 };
 
 export type ParseResult = {
   transaction_type: string;
   segments: Segment[];
-  loops: Record<string, unknown>;
+  loops: LoopNode;
   metadata: Record<string, unknown>;
 };
 
@@ -15,8 +22,9 @@ export type ValidationIssue = {
   severity: "error" | "warning";
   code: string;
   message: string;
+  loop?: string;
   segment?: string;
-  location?: string;
+  element_position?: number;
   fix_suggestion?: string;
 };
 

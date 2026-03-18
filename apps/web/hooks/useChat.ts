@@ -2,22 +2,21 @@
 
 import { useState } from "react";
 import { askAi } from "@/lib/api";
-import { ChatResponse } from "@/types/api";
 
 export function useChat() {
-  const [response, setResponse] = useState<ChatResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [response, setResponse] = useState<{ explanation: string; suggested_fix: string } | null>(null);
 
-  async function ask(question: string, transactionType: string, validationIssues: unknown[]) {
+  async function ask(question: string, transactionType: string, segment: string, error: string) {
     setLoading(true);
     try {
-      const result = await askAi(question, transactionType, validationIssues);
-      setResponse(result);
-      return result;
+      const answer = await askAi(question, transactionType, segment, error);
+      setResponse(answer);
+      return answer;
     } finally {
       setLoading(false);
     }
   }
 
-  return { response, loading, ask };
+  return { ask, response, loading };
 }

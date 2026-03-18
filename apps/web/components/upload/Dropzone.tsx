@@ -10,18 +10,24 @@ export default function Dropzone({ onFile }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   return (
-    <div className="dropzone" onClick={() => inputRef.current?.click()}>
+    <div
+      className="cursor-pointer rounded-lg border-2 border-dashed border-slate-300 bg-white p-10 text-center hover:border-primary"
+      onClick={() => inputRef.current?.click()}
+    >
       <input
         ref={inputRef}
         type="file"
-        accept=".edi,.txt,.x12"
+        accept=".edi,.txt,.dat,.x12"
         hidden
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) onFile(file);
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) {
+            onFile(file);
+          }
         }}
       />
-      <p>Click to upload .edi / .txt / .x12 file</p>
+      <p className="text-sm text-slate-600">Drag & drop is supported by browser, or click here to select a file.</p>
+      <p className="mt-2 font-medium">Accepted: .edi, .txt, .dat, .x12</p>
     </div>
   );
 }

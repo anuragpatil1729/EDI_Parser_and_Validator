@@ -1,23 +1,46 @@
-from typing import Dict, List
+import os
+from typing import Dict
+
+import httpx
+
+GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
 
 
-def generate_response(issue_codes: List[str]) -> Dict:
-    if not issue_codes:
-        return {
-            "answer": "I do not see validation errors. If a payer still rejects, verify payer companion guide rules.",
-            "next_steps": [
-                "Confirm submitter/receiver IDs.",
-                "Validate against payer companion guide.",
-                "Re-submit and track acknowledgement (999/277CA).",
-            ],
-        }
-
-    first = issue_codes[0]
+def _fallback_response(payload: Dict[str, str]) -> Dict[str, str]:
     return {
-        "answer": f"The claim is likely rejected due to {first}. Fix the referenced segment, then re-run validation before resubmission.",
-        "next_steps": [
-            "Open the listed segment index/location in the viewer.",
-            "Apply the suggested fix from the error table.",
-            "Re-validate and ensure error count is zero.",
-        ],
+        "explanation": (
+            f"The error '{payload['error']}' in segment {payload['segment']} indicates a structural or format mismatch. "
+            "Payers reject this when the segment does not match implementation guide expectations."
+        ),
+        "suggested_fix": "Review the segment values, correct identifiers/date formats, and re-run validation before resubmission.",
     }
+
+
+def generate_response(prompt: str, context: Dict[str, str]) -> Dict[str, str]:
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return _fallback_response(context)
+
+    body = {
+        "contents": [
+            {
+                "parts": [{"text": prompt}],
+            }
+        ]
+    }
+
+    try:
+        response = httpx.post(
+            f"{GEMINI_ENDPOINT}?key={api_key}",
+            json=body,
+            timeout=20,
+        )
+        response.raise_for_status()
+        data = response.json()
+        text = data["candidates"][0]["content"]["parts"][0]["text"]
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        explanation = lines[0] if lines else _fallback_response(context)["explanation"]
+        suggested_fix = lines[1] if len(lines) > 1 else _fallback_response(context)["suggested_fix"]
+        return {"explanation": explanation, "suggested_fix": suggested_fix}
+    except Exception:
+        return _fallback_response(context)

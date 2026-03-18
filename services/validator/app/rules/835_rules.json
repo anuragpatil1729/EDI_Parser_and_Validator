@@ -1,1 +1,4 @@
-{"required_segments":["ST","BPR","TRN","SE"]}
+{
+  "required_segments": ["ST", "BPR", "TRN", "SE"],
+  "rules": []
+}

@@ -1,19 +1,34 @@
-# Healthcare EDI Parser & Validator
+# Healthcare EDI Validator
 
-A monorepo starter for parsing, validating, and explaining healthcare X12 EDI files (837/835/834).
+Production-focused monorepo web application to parse, validate, and visualize US healthcare X12 EDI files (837P, 837I, 835, 834), with AI-assisted explanations.
 
-## What is included
+## Monorepo Structure
 
-- **Parser service (FastAPI)**: detects transaction type and parses EDI into segments + a simple loop tree.
-- **Validator service (FastAPI)**: applies core structural and format checks with human-friendly error messages.
-- **AI assistant service (FastAPI)**: explains likely rejection causes and suggested remediations from validation output.
-- **API gateway (Node/Express)**: simple aggregation layer for upload/parse/validate/chat.
-- **Web app (Next.js)**: upload, viewer, dashboards, error table, and AI chat panel.
+- `apps/web` - Next.js App Router + TypeScript + Tailwind UI frontend.
+- `apps/api` - Node.js Express gateway for upload/parse/validate/chat orchestration.
+- `services/parser` - FastAPI parser service.
+- `services/validator` - FastAPI validator service.
+- `services/ai` - FastAPI AI explanation service using Gemini API (with safe fallback).
+- `packages` - Shared dictionaries and rules.
+- `infra/docker` - Service Dockerfiles.
 
-## Quick start
+## API Contract
+
+- `POST /upload` -> `{ fileId }`
+- `POST /parse` -> parsed EDI JSON
+- `POST /validate` -> `issues[]`
+- `POST /chat` -> explanation + suggested fix
+
+## Run
 
 ```bash
 docker compose up --build
 ```
 
-Or run services locally from their folders.
+Web: `http://localhost:3000`
+
+## Notes
+
+- Parser splits segments by `~`, elements by `*`, detects transaction type from `ST`, and emits loop tree JSON.
+- Validator executes required, regex, and cross-field checks using JSON rule files under `services/validator/app/rules`.
+- AI service uses `GEMINI_API_KEY` if configured; otherwise returns deterministic fallback guidance.

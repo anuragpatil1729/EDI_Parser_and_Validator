@@ -7,8 +7,9 @@ class ValidationIssue(BaseModel):
     severity: str
     code: str
     message: str
+    loop: Optional[str] = None
     segment: Optional[str] = None
-    location: Optional[str] = None
+    element_position: Optional[int] = None
     fix_suggestion: Optional[str] = None
 
 

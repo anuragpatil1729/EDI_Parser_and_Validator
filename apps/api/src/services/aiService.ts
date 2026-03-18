@@ -1,15 +1,15 @@
 import { env } from "../config/env";
 
-export async function askAssistant(question: string, transactionType: string, validationIssues: unknown[]) {
+export async function askAssistant(payload: { transaction_type: string; segment: string; error: string }) {
   const response = await fetch(`${env.aiUrl}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      question,
-      transaction_type: transactionType,
-      validation_issues: validationIssues
-    })
+    body: JSON.stringify(payload),
   });
-  if (!response.ok) throw new Error(`AI failed: ${response.status}`);
+
+  if (!response.ok) {
+    throw new Error(`AI service failed: ${response.status}`);
+  }
+
   return response.json();
 }
