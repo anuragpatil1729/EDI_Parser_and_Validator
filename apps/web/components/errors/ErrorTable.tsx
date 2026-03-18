@@ -1,39 +1,94 @@
+import Badge from "@/components/ui/Badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { ValidationIssue } from "@/types/edi";
 
-export default function ErrorTable({ issues }: { issues: ValidationIssue[] }) {
+type ApplyFixPayload = {
+  issue: ValidationIssue;
+  nextValue: string;
+};
+
+function guessFixedValue(issue: ValidationIssue): string | null {
+  const suggestion = issue.suggestion || issue.fix_suggestion || "";
+  const quoted = suggestion.match(/"([^"]+)"/);
+  if (quoted?.[1]) {
+    return quoted[1];
+  }
+  const singleQuoted = suggestion.match(/'([^']+)'/);
+  return singleQuoted?.[1] ?? null;
+}
+
+export default function ErrorTable({
+  issues,
+  onApplyFix,
+  fixingIssueKey,
+  onSelectIssue,
+}: {
+  issues: ValidationIssue[];
+  onApplyFix?: (payload: ApplyFixPayload) => void;
+  fixingIssueKey?: string | null;
+  onSelectIssue?: (issue: ValidationIssue) => void;
+}) {
+  if (issues.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Validation Errors</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-emerald-700">No errors found ✅</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <section className="space-y-2">
-      <h3 className="text-lg font-semibold">Validation Errors</h3>
-      <div className="overflow-x-auto rounded border bg-white">
-        <table className="min-w-full text-left text-sm">
-          <thead className="bg-slate-100">
-            <tr>
-              <th className="p-2">Severity</th>
-              <th className="p-2">Loop</th>
-              <th className="p-2">Segment</th>
-              <th className="p-2">Element</th>
-              <th className="p-2">Value</th>
-              <th className="p-2">Error</th>
-              <th className="p-2">Explanation</th>
-              <th className="p-2">Suggestion</th>
-            </tr>
-          </thead>
-          <tbody>
-            {issues.map((issue, index) => (
-              <tr key={`${issue.code}-${index}`} className="border-t align-top">
-                <td className={`p-2 font-medium ${issue.severity === "error" ? "text-red-700" : "text-amber-700"}`}>{issue.severity}</td>
-                <td className="p-2">{issue.loop || "-"}</td>
-                <td className="p-2">{issue.segment || "-"}</td>
-                <td className="p-2">{issue.element || issue.element_position || "-"}</td>
-                <td className="p-2">{issue.value || "-"}</td>
-                <td className="p-2">{issue.error || issue.message}</td>
-                <td className="p-2 text-slate-600">{issue.explanation || issue.message}</td>
-                <td className="p-2 text-emerald-700">{issue.suggestion || issue.fix_suggestion || "-"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
+    <Card>
+      <CardHeader>
+        <CardTitle>Validation Errors</CardTitle>
+      </CardHeader>
+      <CardContent className="max-h-[620px] overflow-y-auto p-0">
+        <div className="space-y-3 p-4">
+          {issues.map((issue, index) => {
+            const issueKey = `${issue.code}-${index}`;
+            const suggestedValue = guessFixedValue(issue);
+            return (
+              <div
+                key={issueKey}
+                className={`rounded-lg border p-3 ${issue.severity === "error" ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"}`}
+              >
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <button type="button" className="text-left" onClick={() => onSelectIssue?.(issue)}>
+                    <span className="font-semibold text-slate-900">
+                      {issue.segment || "Unknown Segment"}.{issue.element || issue.element_position || "?"}: <span className="font-mono">{issue.value ?? ""}</span>
+                    </span>
+                  </button>
+                  <Badge variant={issue.severity === "error" ? "error" : "warning"}>{issue.severity}</Badge>
+                </div>
+
+                <p className="text-sm text-slate-800">→ {issue.error || issue.message}</p>
+                <p className="text-sm text-slate-700">→ {issue.explanation || issue.message}</p>
+                <p className="text-sm text-emerald-700">→ {issue.suggestion || issue.fix_suggestion || "No suggestion provided."}</p>
+
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    disabled={!suggestedValue || !onApplyFix || fixingIssueKey === issueKey}
+                    onClick={() => {
+                      if (!suggestedValue || !onApplyFix) {
+                        return;
+                      }
+                      onApplyFix({ issue, nextValue: suggestedValue });
+                    }}
+                    className="rounded bg-slate-900 px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {fixingIssueKey === issueKey ? "Applying..." : "Apply Fix"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

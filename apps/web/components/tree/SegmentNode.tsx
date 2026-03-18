@@ -1,26 +1,40 @@
+import Badge from "@/components/ui/Badge";
 import { ValidationIssue } from "@/types/edi";
 
 export default function SegmentNode({
   name,
   depth,
-  hasError = false,
+  severity,
   issues = [],
+  onSelectIssue,
 }: {
   name: string;
   depth: number;
-  hasError?: boolean;
+  severity?: "error" | "warning";
   issues?: ValidationIssue[];
+  onSelectIssue?: (issue: ValidationIssue) => void;
 }) {
+  const nodeTint = severity === "error" ? "bg-red-50 border-red-200" : severity === "warning" ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200";
+
   return (
-    <div style={{ paddingLeft: `${depth * 14}px` }} className="py-1 text-sm">
-      <div className="flex items-center gap-2">
-        <span>• {name}</span>
-        {hasError ? <span className="rounded bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">Has errors</span> : null}
+    <div style={{ marginLeft: `${depth * 14}px` }} className={`rounded border px-3 py-2 text-sm ${nodeTint}`}>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-medium text-slate-800">{name}</span>
+        {severity === "error" ? <Badge variant="error">Error</Badge> : null}
+        {severity === "warning" ? <Badge variant="warning">Warning</Badge> : null}
       </div>
       {issues.length > 0 ? (
-        <ul className="mt-1 space-y-1 text-xs text-red-700">
+        <ul className="mt-2 space-y-1 text-xs text-slate-700">
           {issues.map((issue, index) => (
-            <li key={`${issue.code}-${index}`}>{issue.error || issue.message}</li>
+            <li key={`${issue.code}-${index}`}>
+              <button
+                type="button"
+                onClick={() => onSelectIssue?.(issue)}
+                className="text-left hover:text-primary hover:underline"
+              >
+                {issue.error || issue.message}
+              </button>
+            </li>
           ))}
         </ul>
       ) : null}
