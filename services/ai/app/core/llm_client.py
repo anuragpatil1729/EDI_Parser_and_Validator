@@ -1,17 +1,18 @@
 import json
 import os
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Literal
 
 import httpx
 
 GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+Provider = Literal["ollama", "gemini"]
+
 
 def _extract_first_json_object(text: str) -> Optional[dict[str, Any]]:
     if not text:
         return None
 
-    # Strip markdown code fences if present
     code_block_match = re.search(r"```json\s*(\{.*?\})\s*```", text, flags=re.DOTALL)
     if code_block_match:
         try:
@@ -19,7 +20,6 @@ def _extract_first_json_object(text: str) -> Optional[dict[str, Any]]:
         except Exception:
             pass
 
-    # Find the outermost { } using a bracket counter (handles nested JSON)
     start = text.find("{")
     if start == -1:
         return None
@@ -54,6 +54,21 @@ def _extract_first_json_object(text: str) -> Optional[dict[str, Any]]:
     return None
 
 
+def is_ollama_available() -> bool:
+    ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434").rstrip("/")
+    try:
+        response = httpx.get(f"{ollama_url}/api/tags", timeout=3)
+        return response.status_code < 400
+    except Exception:
+        return False
+
+
+def get_active_provider() -> Dict[str, str]:
+    if is_ollama_available():
+        return {"provider": "ollama", "model": os.getenv("OLLAMA_MODEL", "edi-translator")}
+    return {"provider": "gemini", "model": "gemini-1.5-flash"}
+
+
 def _fallback_response(payload: Dict[str, str]) -> Dict[str, str]:
     return {
         "explanation": (
@@ -64,25 +79,15 @@ def _fallback_response(payload: Dict[str, str]) -> Dict[str, str]:
     }
 
 
-def generate_response(prompt: str, context: Dict[str, str]) -> Dict[str, str]:
+def _generate_with_gemini(prompt: str, context: Dict[str, str]) -> Dict[str, str]:
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         return _fallback_response(context)
 
-    body = {
-        "contents": [
-            {
-                "parts": [{"text": prompt}],
-            }
-        ]
-    }
+    body = {"contents": [{"parts": [{"text": prompt}]}]}
 
     try:
-        response = httpx.post(
-            f"{GEMINI_ENDPOINT}?key={api_key}",
-            json=body,
-            timeout=20,
-        )
+        response = httpx.post(f"{GEMINI_ENDPOINT}?key={api_key}", json=body, timeout=20)
         response.raise_for_status()
         data = response.json()
         text = data["candidates"][0]["content"]["parts"][0]["text"]
@@ -95,15 +100,22 @@ def generate_response(prompt: str, context: Dict[str, str]) -> Dict[str, str]:
 
 
 def _fallback_json(context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    tx = None
-    if context:
-        tx = context.get("transaction_type")
+    tx = context.get("transaction_type") if context else None
     return {
         "transaction_type": tx or "unknown",
         "sections": {},
         "issues_summary": {},
-        "readable_walkthrough": "Translation is unavailable because the LLM API key is not configured. Configure GEMINI_API_KEY and retry.",
+        "readable_walkthrough": "Translation is unavailable because the LLM provider is currently unavailable.",
     }
+
+
+def generate_response(prompt: str, context: Dict[str, str]) -> Dict[str, str]:
+    provider = get_active_provider()["provider"]
+    if provider == "ollama":
+        from app.core.ollama_client import generate_chat_response_ollama
+
+        return generate_chat_response_ollama(prompt, model=os.getenv("OLLAMA_MODEL", "edi-translator"), context=context)
+    return _generate_with_gemini(prompt, context)
 
 
 def generate_json_response(prompt: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -117,11 +129,7 @@ def generate_json_response(prompt: str, context: Optional[Dict[str, Any]] = None
     }
 
     try:
-        response = httpx.post(
-            f"{GEMINI_ENDPOINT}?key={api_key}",
-            json=body,
-            timeout=30,
-        )
+        response = httpx.post(f"{GEMINI_ENDPOINT}?key={api_key}", json=body, timeout=30)
         response.raise_for_status()
         data = response.json()
         text = data["candidates"][0]["content"]["parts"][0]["text"]

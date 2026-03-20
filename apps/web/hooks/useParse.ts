@@ -19,7 +19,7 @@ export function useParse() {
       setParseResult(parsed);
       setValidation(validated);
     } catch (parseError) {
-      setError(parseError instanceof Error ? parseError.message : "Parse failed");
+      setError("We could not parse and validate this file.");
     } finally {
       setLoading(false);
     }

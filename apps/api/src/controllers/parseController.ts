@@ -9,7 +9,7 @@ export async function parseController(req: Request, res: Response) {
 
     let content = rawEdi;
     if (!content && fileId) {
-      const file = await getFile(fileId);
+      const file = await getFile(fileId, req.user?.id);
       if (!file) {
         return res.status(404).json({ error: "fileId not found" });
       }
@@ -22,7 +22,7 @@ export async function parseController(req: Request, res: Response) {
 
     const parsed = await parseEdi(content);
     if (fileId) {
-      await saveParsedResult(fileId, parsed);
+      await saveParsedResult(fileId, parsed, req.user?.id);
     }
 
     return res.json(parsed);

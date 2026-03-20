@@ -165,6 +165,7 @@ create table if not exists public.edi_uploads (
   file_name   text not null,
   content     text not null,
   uploaded_at timestamptz not null default now(),
+  user_id     uuid references auth.users(id) on delete cascade,
   created_at  timestamptz not null default now()
 );
 
@@ -172,6 +173,7 @@ create table if not exists public.edi_uploads (
 create table if not exists public.edi_parsed_results (
   file_id     uuid primary key references public.edi_uploads(file_id) on delete cascade,
   parsed_json jsonb not null,
+  user_id     uuid references auth.users(id) on delete cascade,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
@@ -181,6 +183,7 @@ create table if not exists public.edi_validation_results (
   file_id         uuid primary key references public.edi_uploads(file_id) on delete cascade,
   validation_json jsonb not null,
   is_valid        boolean generated always as ((validation_json->>'is_valid')::boolean) stored,
+  user_id         uuid references auth.users(id) on delete cascade,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
@@ -189,6 +192,16 @@ create table if not exists public.edi_validation_results (
 alter table public.edi_uploads enable row level security;
 alter table public.edi_parsed_results enable row level security;
 alter table public.edi_validation_results enable row level security;
+
+-- Recommended per-user policies
+create policy "Users can read their uploads" on public.edi_uploads for select using (auth.uid() = user_id);
+create policy "Users can insert their uploads" on public.edi_uploads for insert with check (auth.uid() = user_id);
+create policy "Users can read parsed results" on public.edi_parsed_results for select using (auth.uid() = user_id);
+create policy "Users can insert parsed results" on public.edi_parsed_results for insert with check (auth.uid() = user_id);
+create policy "Users can update parsed results" on public.edi_parsed_results for update using (auth.uid() = user_id);
+create policy "Users can read validation results" on public.edi_validation_results for select using (auth.uid() = user_id);
+create policy "Users can insert validation results" on public.edi_validation_results for insert with check (auth.uid() = user_id);
+create policy "Users can update validation results" on public.edi_validation_results for update using (auth.uid() = user_id);
 ```
 
 Without Supabase configured the app uses in-memory storage — uploads are lost when the API container restarts.
