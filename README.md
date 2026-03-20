@@ -8,7 +8,7 @@
 
 ## Overview
 
-Healthcare EDI Validator is a production-focused monorepo web application that ingests raw X12 EDI files (837P, 837I, 835, 834), parses them into a structured loop/segment tree, runs multi-layer validation checks, and serves AI-generated explanations and fix suggestions for every validation issue.
+Healthcare EDI Validator is a production-focused monorepo web application that ingests raw X12 EDI files (837P, 837I, 835, 834), parses them into a structured loop/segment tree, runs multi-layer validation checks, and delivers AI-generated explanations and fix suggestions for every validation issue found.
 
 Built for healthcare operations teams, billing specialists, and EDI developers who need a fast, clear way to debug transaction files without reading raw X12 text.
 
@@ -19,11 +19,11 @@ Built for healthcare operations teams, billing specialists, and EDI developers w
 - **Upload** `.edi`, `.txt`, `.dat`, `.x12`, or `.zip` files via drag-and-drop or click
 - **Parse** raw X12 into a visual HL loop tree with segment and element drill-down
 - **Validate** against required segment rules, format checks (NPI, date, ZIP), enum constraints, and cross-field logic (claim total vs. service line sum, DOB vs. claim date)
-- **AI Explain** — ask the AI assistant to explain any validation error and get a suggested fix, powered by Gemini 1.5 Flash (with a deterministic fallback when no API key is set)
+- **AI Explain** — ask the AI assistant to explain any validation error and get a suggested fix, powered by Gemini 1.5 Flash (with a deterministic fallback when no API key is configured)
 - **Apply Fix** — one-click patch that updates the segment value and re-runs validation live
 - **Dashboards** for 837 Claims, 835 Remittance, and 834 Enrollment with search, sort, and bar chart summaries
-- **Sample files** — try the app instantly with pre-built valid and invalid EDI files
-- **Supabase persistence** — optionally store uploads, parse results, and validation results (falls back to in-memory if not configured)
+- **Sample files** — load pre-built valid and invalid EDI files directly from the Upload page
+- **Supabase persistence** — optionally store uploads, parse results, and validation results; falls back to in-memory if not configured
 
 ---
 
@@ -72,8 +72,8 @@ Built for healthcare operations teams, billing specialists, and EDI developers w
 
 ### Prerequisites
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) running
-- A `.env` file in the project root (see [Environment Variables](#environment-variables))
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
+- A `.env` file in the project root (see [Environment Variables](#environment-variables) below)
 
 ### Run with Docker Compose
 
@@ -81,17 +81,17 @@ Built for healthcare operations teams, billing specialists, and EDI developers w
 git clone https://github.com/anuragpatil1729/EDI_Parser_and_Validator.git
 cd EDI_Parser_and_Validator
 
-# Create your .env file (see Environment Variables section below)
-cp .env.example .env   # then fill in your values
+# Copy the example env file and fill in your values
+cp .env.example .env
 
 docker compose up --build
 ```
 
 Open **http://localhost:3000** in your browser.
 
-> On first run, Docker will pull base images and install dependencies — this takes 2–3 minutes. Subsequent starts are fast.
+> On first run Docker pulls base images and installs dependencies — expect 2–3 minutes. Subsequent starts are fast.
 
-### Stopping
+### Stop the stack
 
 ```bash
 docker compose down
@@ -125,14 +125,28 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 # Gemini AI (optional — falls back to deterministic responses without this)
 GEMINI_API_KEY=your-gemini-api-key
+
+# Ollama (used for translation narratives; self-hosted)
+OLLAMA_URL=http://localhost:11434
+OLLAMA_TRANSLATION_TEACHER_MODEL=llama3
+OLLAMA_MODEL=llama3
+OLLAMA_TEMPERATURE=0.2
+
+# If true, translation endpoint writes pseudo-label training examples to disk
+TRANSLATION_COLLECT_TRAINING=false
 ```
 
 | Variable | Required | Description |
 |---|---|---|
-| `NEXT_PUBLIC_API_BASE_URL` | Yes | URL of the API gateway, as seen by the browser |
+| `NEXT_PUBLIC_API_BASE_URL` | **Yes** | URL of the API gateway, as seen by the browser |
 | `SUPABASE_URL` | No | Supabase project URL for persistent storage |
 | `SUPABASE_SERVICE_ROLE_KEY` | No | Supabase service role key (bypasses RLS) |
 | `GEMINI_API_KEY` | No | Google Gemini API key for AI explanations |
+| `OLLAMA_URL` | No | Ollama base URL for translation narratives |
+| `OLLAMA_TRANSLATION_TEACHER_MODEL` | No | Ollama model used for translation targets (teacher) |
+| `OLLAMA_MODEL` | No | Fallback Ollama model name |
+| `OLLAMA_TEMPERATURE` | No | Temperature for Ollama generation |
+| `TRANSLATION_COLLECT_TRAINING` | No | Write pseudo-label translation examples to disk |
 
 **Where to get keys:**
 - Supabase: Dashboard → Project Settings → API Keys
@@ -142,7 +156,7 @@ GEMINI_API_KEY=your-gemini-api-key
 
 ## Supabase Setup (Optional)
 
-If you want to persist uploads and results across restarts, run these SQL queries in your Supabase SQL Editor:
+To persist uploads and results across container restarts, run these queries in your Supabase SQL Editor:
 
 ```sql
 -- Uploads table
@@ -177,13 +191,13 @@ alter table public.edi_parsed_results enable row level security;
 alter table public.edi_validation_results enable row level security;
 ```
 
-Without Supabase configured, the app uses in-memory storage — uploads are lost when the API container restarts.
+Without Supabase configured the app uses in-memory storage — uploads are lost when the API container restarts.
 
 ---
 
 ## Supported Transaction Types
 
-| Transaction | Description | Validation Rules |
+| Transaction | Description | Key Validation Rules |
 |---|---|---|
 | **837P** | Professional Claims | NM1 qualifiers, NM109 NPI format, CLM total vs SV1 sum, DOB before claim date |
 | **837I** | Institutional Claims | Same as 837P |
@@ -202,8 +216,9 @@ POST /upload
 Content-Type: multipart/form-data
 Body: file (field name)
 
-Response: { "fileId": "uuid" }
-          | { "batch": { "total_files": N, "file_ids": [...] } }  // for .zip
+Response:
+  { "fileId": "uuid" }
+  { "batch": { "total_files": N, "file_ids": [...] } }   // for .zip uploads
 ```
 
 ### Parse EDI
@@ -223,6 +238,24 @@ Content-Type: application/json
 Body: { "transaction_type": "837", "segments": [...], "fileId": "uuid" }
 
 Response: { is_valid, issues[], summary: { total, errors, warnings } }
+```
+
+### Translate (Narrative)
+```
+POST /translate
+Content-Type: application/json
+Body: {
+  "transaction_type": "837|835|834",
+  "parsed": { /* ParseResult */ },
+  "issues": [ /* optional ValidationIssue[] */ ]
+}
+
+Response: {
+  "transaction_type": "...",
+  "sections": { "overview": {...}, "participants": {...}, "details": {...}, ... },
+  "readable_walkthrough": "string",
+  "issues_summary": { /* optional */ }
+}
 ```
 
 ### AI Chat
@@ -247,57 +280,24 @@ GET :8003/health     → AI service
 ## Validation Checks
 
 ### Required Segments
+
 Each transaction type enforces a set of required segments defined in `services/validator/app/rules/`.
 
 ### Format Checks
+
 - **NPI** (`NM109`): must be exactly 10 numeric digits
 - **Dates** (`DTP03`, `DMG02`): must follow `YYYYMMDD`
-- **ZIP codes** (`N403`): must be `12345` or `12345-6789`
+- **ZIP codes** (`N403`): must match `12345` or `12345-6789`
 
 ### Cross-Field Checks (837 only)
+
 - **Claim total mismatch**: `CLM02` must equal the sum of all `SV1` line charges
 - **DOB after claim date**: patient date of birth must precede the claim service date
 - **Subscriber ID mismatch**: subscriber `NM109` must be consistent across all loops
 
 ### Code Checks
+
 - **Unexpected NM1 qualifier**: `NM108` values outside `XX`, `34`, `24`, `MI` trigger a warning
-
----
-
-## Development
-
-### Running Services Individually
-
-```bash
-# Frontend only
-npm --workspace apps/web run dev
-
-# API gateway only
-npm --workspace apps/api run dev
-
-# Python services (requires Python 3.11+)
-bash scripts/run_all.sh
-```
-
-### Running Parser Tests
-
-```bash
-cd services/parser
-python -m pytest tests/
-```
-
-### Running Validator Tests
-
-```bash
-cd services/validator
-python -m pytest tests/
-```
-
-### Test the Parser Directly
-
-```bash
-python scripts/test_parser.py
-```
 
 ---
 
@@ -311,6 +311,38 @@ The following sample EDI files are included in `apps/web/public/sample-files/` a
 | `invalid_837.edi` | 837P | Claim with bad NPI (5 digits) and missing CLM — triggers errors |
 | `sample_835.edi` | 835 | Remittance with CLP, SVC, and CAS adjustment segments |
 | `sample_834.edi` | 834 | Enrollment with 2 member records, INS and HD segments |
+
+---
+
+## Development
+
+### Running Services Individually
+
+```bash
+# Frontend
+npm --workspace apps/web run dev
+
+# API gateway
+npm --workspace apps/api run dev
+
+# Python services (requires Python 3.11+)
+bash scripts/run_all.sh
+```
+
+### Running Tests
+
+```bash
+# Parser tests
+cd services/parser
+python -m pytest tests/
+
+# Validator tests
+cd services/validator
+python -m pytest tests/
+
+# Test the parser directly
+python scripts/test_parser.py
+```
 
 ---
 
@@ -328,9 +360,7 @@ The following sample EDI files are included in `apps/web/public/sample-files/` a
 
 ---
 
-## Project Status
-
-This project is actively developed. Planned improvements include:
+## Roadmap
 
 - [ ] 837I (Institutional) specific validation rules
 - [ ] CARC / RARC code lookup in 835 remittance viewer

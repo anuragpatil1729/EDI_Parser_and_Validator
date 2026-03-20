@@ -50,3 +50,7 @@ services:
       dockerfile: infra/docker/ai.Dockerfile
     ports:
       - "8003:8003"
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

@@ -11,5 +11,9 @@
     "dev:api": "npm --workspace apps/api run dev",
     "build:web": "npm --workspace apps/web run build",
     "typecheck:web": "npm --workspace apps/web run typecheck"
+  },
+  "dependencies": {
+    "package.json": "^2.0.1",
+    "pkg.json": "^2.0.9"
   }
 }
