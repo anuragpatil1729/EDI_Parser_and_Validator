@@ -7,6 +7,7 @@ import { logger } from "./middleware/logger";
 import chatRoutes from "./routes/chat";
 import parseRoutes from "./routes/parse";
 import uploadRoutes from "./routes/upload";
+import translateRoutes from "./routes/translate";
 import validateRoutes from "./routes/validate";
 
 const app = express();
@@ -19,6 +20,7 @@ app.use("/upload", uploadRoutes);
 app.use("/parse", parseRoutes);
 app.use("/validate", validateRoutes);
 app.use("/chat", chatRoutes);
+app.use("/translate", translateRoutes);
 
 app.use(errorHandler);
 

@@ -57,3 +57,20 @@ export async function askAi(
   });
   return handleResponse<{ explanation: string; suggested_fix: string }>(response);
 }
+
+export async function translateEdi(
+  parsed: ParseResult,
+  options?: { issues?: ValidationResult["issues"] },
+): Promise<any> {
+  const response = await fetch(`${API_BASE}/translate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      transaction_type: parsed.transaction_type,
+      parsed,
+      issues: options?.issues ?? undefined,
+    }),
+  });
+
+  return handleResponse<any>(response);
+}

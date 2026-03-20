@@ -27,13 +27,15 @@ export default function SegmentNode({
         <ul className="mt-2 space-y-1 text-xs text-slate-700">
           {issues.map((issue, index) => (
             <li key={`${issue.code}-${index}`}>
-              <button
-                type="button"
+              <span
+                role="button"
+                tabIndex={0}
                 onClick={() => onSelectIssue?.(issue)}
-                className="text-left hover:text-primary hover:underline"
+                onKeyDown={(e) => e.key === "Enter" && onSelectIssue?.(issue)}
+                className="cursor-pointer text-left hover:text-primary hover:underline"
               >
                 {issue.error || issue.message}
-              </button>
+              </span>
             </li>
           ))}
         </ul>
