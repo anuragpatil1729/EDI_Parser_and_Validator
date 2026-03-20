@@ -11,7 +11,7 @@ export async function validateController(req: Request, res: Response) {
 
     const result = await validateEdi(transaction_type, segments);
     if (typeof fileId === "string" && fileId.trim()) {
-      await saveValidationResult(fileId, result);
+      await saveValidationResult(fileId, result, req.user?.id);
     }
 
     return res.json(result);

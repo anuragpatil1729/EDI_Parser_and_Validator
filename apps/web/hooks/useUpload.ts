@@ -13,7 +13,7 @@ export function useUpload() {
     try {
       return await uploadFile(file);
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
+      setError("Unable to upload this file right now.");
       throw uploadError;
     } finally {
       setLoading(false);

@@ -1,9 +1,10 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ValidationIssue } from "@/types/edi";
 import { useChat } from "@/hooks/useChat";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { getAiProvider } from "@/lib/api";
 import Badge from "@/components/ui/Badge";
 
 const LOOP_LABELS: Record<string, string> = {
@@ -31,6 +32,11 @@ export default function AIChatPanel({
 }) {
   const [question, setQuestion] = useState("Explain this issue and suggest a safe fix.");
   const { response, loading, ask } = useChat();
+  const [provider, setProvider] = useState<string>("gemini");
+
+  useEffect(() => {
+    getAiProvider().then((p) => setProvider(p.provider)).catch(() => setProvider("gemini"));
+  }, []);
 
   const focusIssue = useMemo(() => selectedIssue ?? issues[0] ?? null, [issues, selectedIssue]);
 
@@ -52,7 +58,7 @@ export default function AIChatPanel({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>AI Assistant</CardTitle>
+        <div className="flex items-center justify-between"><CardTitle>AI Assistant</CardTitle><span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700">Powered by {provider === "ollama" ? "Ollama" : "Gemini"}</span></div>
       </CardHeader>
       <CardContent className="space-y-3">
         {focusIssue ? (

@@ -13,3 +13,11 @@ export async function askAssistant(payload: { transaction_type: string; segment:
 
   return response.json();
 }
+
+export async function getAiProvider(): Promise<{ provider: "ollama" | "gemini"; model: string }> {
+  const response = await fetch(`${env.aiUrl}/provider`);
+  if (!response.ok) {
+    throw new Error("AI provider unavailable");
+  }
+  return response.json() as Promise<{ provider: "ollama" | "gemini"; model: string }>;
+}

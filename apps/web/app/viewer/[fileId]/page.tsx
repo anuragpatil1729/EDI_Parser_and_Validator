@@ -7,7 +7,7 @@ import SegmentTree from "@/components/tree/SegmentTree";
 import AIChatPanel from "@/components/chat/AIChatPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { TabPanel, Tabs } from "@/components/ui/Tabs";
-import { translateEdi, validateEdi } from "@/lib/api";
+import { getUploadMeta, translateEdi, validateEdi } from "@/lib/api";
 import { LoopNode, ParseResult, Segment, TranslationResult, ValidationIssue, ValidationResult } from "@/types/edi";
 
 type ViewerTab = "tree" | "errors" | "ai" | "translation";
@@ -136,10 +136,15 @@ export default function ViewerPage({ params }: { params: { fileId: string } }) {
   const [translation, setTranslation] = useState<TranslationResult | null>(null);
   const [translationLoading, setTranslationLoading] = useState(false);
   const [translationError, setTranslationError] = useState<string | null>(null);
+  const [uploadMeta, setUploadMeta] = useState<{ fileName: string; uploadedAt: string } | null>(null);
 
   useEffect(() => {
     parseAndValidateByFileId(params.fileId);
   }, [params.fileId, parseAndValidateByFileId]);
+
+  useEffect(() => {
+    getUploadMeta(params.fileId).then(setUploadMeta).catch(() => setUploadMeta(null));
+  }, [params.fileId]);
 
   useEffect(() => {
     setWorkingParseResult(parseResult);
@@ -173,7 +178,7 @@ export default function ViewerPage({ params }: { params: { fileId: string } }) {
         }
       } catch (e) {
         if (!cancelled) {
-          setTranslationError(e instanceof Error ? e.message : "Translation failed");
+          setTranslationError("Translation is currently unavailable. Please retry in a moment.");
         }
       } finally {
         if (!cancelled) {
@@ -231,11 +236,12 @@ export default function ViewerPage({ params }: { params: { fileId: string } }) {
         <Card>
           <CardHeader>
             <CardTitle>Healthcare EDI Debug Viewer</CardTitle>
+            {uploadMeta ? <p className="text-sm text-slate-600">{uploadMeta.fileName} • Uploaded {new Date(uploadMeta.uploadedAt).toLocaleString()}</p> : null}
           </CardHeader>
           <CardContent>
             {!loading && !error && !workingParseResult ? <p className="text-slate-500">Upload a file to begin.</p> : null}
             {loading ? <p className="animate-pulse text-sm text-slate-600">Parsing and validating transaction…</p> : null}
-            {error ? <p className="text-red-600">{error}</p> : null}
+            {error ? <p className="text-red-600">We could not process this file right now. Please try again.</p> : null}
           </CardContent>
         </Card>
 

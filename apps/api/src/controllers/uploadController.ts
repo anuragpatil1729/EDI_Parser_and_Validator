@@ -16,6 +16,7 @@ export async function uploadController(req: Request, res: Response) {
   }
 
   const fileName = file.originalname.toLowerCase();
+  const userId = req.user?.id;
 
   if (fileName.endsWith(".zip")) {
     const zip = new AdmZip(file.buffer);
@@ -28,7 +29,7 @@ export async function uploadController(req: Request, res: Response) {
       return res.status(400).json({ error: "ZIP contains no supported EDI files" });
     }
 
-    const batch = await saveBatchFiles(entries);
+    const batch = await saveBatchFiles(entries, userId);
     return res.status(201).json({ batch });
   }
 
@@ -37,6 +38,6 @@ export async function uploadController(req: Request, res: Response) {
   }
 
   const content = file.buffer.toString("utf-8");
-  const fileId = await saveFile(file.originalname, content);
+  const fileId = await saveFile(file.originalname, content, userId);
   return res.status(201).json({ fileId });
 }
